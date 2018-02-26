@@ -166,3 +166,11 @@ Feature: Transaction
     Given an existent customer
     When make a boleto transaction with random amount and metadata
     Then the transaction customer must be the same retrieved
+
+  Scenario: Capture a transaction with split rules
+    Given a valid customer
+    And a valid card
+    When make a authorized credit card transaction
+    Then a authorized transaction must be created
+    And capture the transaction with split rules
+    And a paid transaction must be created

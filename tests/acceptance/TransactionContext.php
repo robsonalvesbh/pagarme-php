@@ -8,7 +8,11 @@ use Behat\Gherkin\Node\PyStringNode;
 use Behat\Gherkin\Node\TableNode;
 use Behat\Behat\Tester\Exception\PendingException;
 use Behat\Testwork\Hook\Scope\BeforeSuiteScope;
+use PagarMe\Sdk\BankAccount\BankAccount;
 use PagarMe\Sdk\Customer\Customer;
+use PagarMe\Sdk\Recipient\Recipient;
+use PagarMe\Sdk\SplitRule\SplitRule;
+use PagarMe\Sdk\SplitRule\SplitRuleCollection;
 
 class TransactionContext extends BasicContext
 {
@@ -521,6 +525,40 @@ class TransactionContext extends BasicContext
     }
 
     /**
+     * @Then capture the transaction with split rules
+     */
+    public function captureTransactionWithSplitRules()
+    {
+
+        $transaction = $this->transaction;
+
+        $this->transaction = self::getPagarMe()
+            ->transaction()
+            ->capture(
+                $transaction,
+                1000,
+                null,
+                $this->createValidSplitRule()
+            );
+    }
+
+    /**
+     * @When make a authorized credit card transaction
+     */
+    public function authorizeACreditCardTransaction()
+    {
+        $this->transaction = self::getPagarMe()
+            ->transaction()
+            ->creditCardTransaction(
+                1000,
+                $this->creditCard,
+                $this->customer,
+                1,
+                false
+            );
+    }
+
+    /**
      * @Then must have status :status
      */
     public function mustHaveStatus($status)
@@ -535,5 +573,52 @@ class TransactionContext extends BasicContext
     {
         $transactionCustomer = $this->transaction->getCustomer();
         assertEquals($transactionCustomer->id, $this->customer->getId());
+    }
+
+    private function createValidSplitRule()
+    {
+        $splitRules = new SplitRuleCollection();
+
+        $splitRule1 = self::getPagarMe()->
+            splitRule()->
+            percentageRule(
+                80,
+                $this->createRecipient(),
+                true,
+                true,
+                true
+            );
+
+        $splitRule2 = self::getPagarMe()->
+            splitRule()->
+            percentageRule(
+                20,
+                $this->createRecipient(),
+                false,
+                false,
+                false
+            );
+
+        $splitRules[] = $splitRule1;
+        $splitRules[] = $splitRule2;
+
+        return $splitRules;
+    }
+
+    private function createRecipient()
+    {
+        $accountData = [
+            "bank_code" => "341",
+            "agencia" => "0932",
+            "conta" => "580" . rand(10, 99),
+            "conta_dv" => "5",
+            "document_number" => "26268738888",
+            "legal_name" => "API BANK ACCOUNT"
+        ];
+
+        $bankAccount = new BankAccount($accountData);
+        return self::getPagarMe()
+            ->recipient()
+            ->create($bankAccount);
     }
 }
