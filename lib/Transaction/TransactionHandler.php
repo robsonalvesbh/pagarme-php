@@ -17,6 +17,7 @@ use PagarMe\Sdk\BankAccount\BankAccount;
 use PagarMe\Sdk\Card\Card;
 use PagarMe\Sdk\Customer\Customer;
 use PagarMe\Sdk\Recipient\Recipient;
+use PagarMe\Sdk\SplitRule\SplitRuleCollection;
 
 class TransactionHandler extends AbstractHandler
 {
@@ -133,14 +134,16 @@ class TransactionHandler extends AbstractHandler
      * @param AbstractTransaction $transaction
      * @param int $amount
      * @param array $metadata
+     * @param \PagarMe\Sdk\SplitRule\SplitRuleCollection $splitRules
      * @return AbstractTransaction
      */
     public function capture(
         AbstractTransaction $transaction,
         $amount = null,
-        $metadata = []
+        $metadata = [],
+        $splitRules = null
     ) {
-        $request = new TransactionCapture($transaction, $amount, $metadata);
+        $request = new TransactionCapture($transaction, $amount, $metadata, $splitRules);
         $response = $this->client->send($request);
 
         return $this->buildTransaction($response);
