@@ -2,8 +2,12 @@
 
 namespace PagarMe\SdkTest\Transaction\Request;
 
-use PagarMe\Sdk\Transaction\Request\TransactionCapture;
+use PagarMe\Sdk\BankAccount\BankAccount;
+use PagarMe\Sdk\Recipient\Recipient;
+use PagarMe\Sdk\SplitRule\SplitRule;
+use PagarMe\Sdk\SplitRule\SplitRuleCollection;
 use PagarMe\Sdk\Transaction\CreditCardTransaction;
+use PagarMe\Sdk\Transaction\Request\TransactionCapture;
 use PagarMe\Sdk\RequestInterface;
 
 class TransactionCaptureTest extends \PHPUnit_Framework_TestCase
@@ -138,5 +142,76 @@ class TransactionCaptureTest extends \PHPUnit_Framework_TestCase
             $expectedPayload,
             $transactionCreate->getPayload()
         );
+    }
+
+    /**
+     * @test
+     */
+    public function payloadMustBeEqualWhenProvidingSplitRulesAtTheCaptureStep()
+    {
+        $splitRules = new SplitRuleCollection();
+        $splitRule1 = new SplitRule([
+            "percentage" => 80,
+            "recipient" => $this->createRecipient(),
+            "liable" => true,
+            "charge_processing_fee" => true,
+            "charge_remainder" => true
+        ]);
+
+        $splitRule2 = new SplitRule([
+            "percentage" => 20,
+            "recipient" => $this->createRecipient(),
+            "liable" => false,
+            "charge_processing_fee" => false,
+            "charge_remainder" => false
+        ]);
+
+        $splitRules[] = $splitRule1;
+        $splitRules[] = $splitRule2;
+
+        $transactionCapture = new TransactionCapture(
+            $this->getAbstractTransactionMock(),
+            1000,
+            null,
+            $splitRules
+        );
+
+        $this->assertEquals(
+            [
+                'amount' => 1000,
+                'split_rules' => array(
+                    array(
+                        "recipient_id" => null,
+                        "charge_processing_fee" => true,
+                        "liable" => true,
+                        "percentage" => 80
+                    ),
+                    array(
+                        "recipient_id" => null,
+                        "charge_processing_fee" => false,
+                        "liable" => false,
+                        "percentage" => 20
+                    )
+                )
+            ],
+            $transactionCapture->getPayload()
+        );
+    }
+
+    private function createRecipient()
+    {
+        $accountData = [
+            "bank_code" => "341",
+            "agencia" => "0932",
+            "conta" => "580" . rand(10, 99),
+            "conta_dv" => "5",
+            "document_number" => "26268738888",
+            "legal_name" => "API BANK ACCOUNT"
+        ];
+
+        $bankAccount = new BankAccount($accountData);
+        return new Recipient([
+            "bank_account" => $bankAccount
+        ]);
     }
 }
